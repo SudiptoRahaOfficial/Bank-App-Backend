@@ -6,6 +6,7 @@
 // importing dependencis
 const express = require('express')
 const cookieParser = require('cookie-parser')
+const authRoutes = require('./routes/auth.routes')
 
 // making app
 const app = express()
@@ -19,7 +20,7 @@ const middlewares = [
 app.use(middlewares) // using middlewares
 
 // connecting all API routes
-// app.use('/api/auth')
+app.use('/api/auth', authRoutes)
 
 // exporting app
 module.exports = app
