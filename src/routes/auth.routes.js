@@ -5,10 +5,16 @@
 
 // importing dependencis
 const router = require('express').Router()
-const { signupController } = require('../controllers/auth.controllers')
+const {
+	signupController,
+	signinController,
+} = require('../controllers/auth.controllers')
 
 // signup : POST API - "/api/auth/signup"
 router.post('/signup', signupController)
+
+// signin : POST API - "/api/auth/signin"
+router.post('/signin', signinController)
 
 // exporting router
 module.exports = router
