@@ -1,6 +1,6 @@
-/*
- * file name: user.model.js
- * responsibility: responsible for user schema & model design
+/**
+	- file name: user.model.js
+	- responsibility: responsible for user schema & model design
  */
 
 // importing dependencis

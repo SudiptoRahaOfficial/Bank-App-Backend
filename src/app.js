@@ -1,6 +1,6 @@
-/*
- * file name: app.js
- * responsibility: responsible for application's root functionalities
+/**
+	- file name: app.js
+	- responsibility: responsible for application's root functionalities
  */
 
 // importing dependencis

@@ -1,6 +1,6 @@
-/*
- * file name: server.js
- * responsibility: responsible for application's server
+/**
+	- file name: server.js
+	- responsibility: responsible for application's server
  */
 
 // importing dependencis

@@ -1,6 +1,6 @@
-/*
- * file name: connectDB.js
- * responsibility: responsible for making db connection
+/**
+	- file name: connectDB.js
+	- responsibility: responsible for making db connection
  */
 
 // importing dependencis
