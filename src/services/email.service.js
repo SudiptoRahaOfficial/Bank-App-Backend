@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 })
 
 // Verify the connection configuration
-transporter.verify((error, success) => {
+transporter.verify((error) => {
 	if (error) {
 		console.error('Error connecting to email server:', error)
 	} else {
@@ -40,9 +40,10 @@ const sendEmail = async (to, subject, text, html) => {
 		})
 
 		console.log('Message sent: %s', info.messageId)
-		console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info))
+		return info
 	} catch (error) {
 		console.error('Error sending email:', error)
+		throw error
 	}
 }
 
@@ -53,18 +54,25 @@ const sendEmail = async (to, subject, text, html) => {
         - OTP verification email
  */
 // function for sending email on new user signup
-async function sendSignupEmail(userEmail, userName) {
+async function sendSignupEmail(userEmail, userName, otp) {
 	const subject = 'Welcome to Bank App Backend'
 
 	const text = `Hello ${userName},
 
 Thank you for joining at Bank App Backend. We're excited to have you on board!
 
+Your verification code for Bank App Backend is: ${otp}
+
+This code will expire in next 3 minutes. Verify your account with this code to get full access. For your security, do not share this verification code with anyone.
+
 Best regards,
 The Bank App Backend Team`
 
 	const html = `<p>Hello ${userName},</p>
 <p>Thank you for joining at Bank App Backend. We're excited to have you on board!</p>
+<p>Your verification code for Bank App Backend is:</p>
+<p><strong>${otp}</strong></p>
+<p>This code will expire in next 3 minutes. Verify your account with this code to get full access. For your security, do not share this verification code with anyone.</p>
 <p>Best regards,<br/>The Bank App Backend Team</p>`
 
 	await sendEmail(userEmail, subject, text, html)
@@ -102,7 +110,7 @@ async function sendOTPEmail(userEmail, userName, otp) {
 
 Your verification code for Bank App Backend is: ${otp}
 
-This code will expire shortly. For your security, do not share this verification code with anyone.
+This code will expire in next 3 minutes. For your security, do not share this verification code with anyone.
 
 If you did not request this verification code, please ignore this email and secure your account if necessary.
 
@@ -112,7 +120,7 @@ The Bank App Backend Team`
 	const html = `<p>Hello ${userName},</p>
 <p>Your verification code for Bank App Backend is:</p>
 <p><strong>${otp}</strong></p>
-<p>This code will expire shortly. For your security, do not share this verification code with anyone.</p>
+<p>This code will expire in next 3 minutes. For your security, do not share this verification code with anyone.</p>
 <p>If you did not request this verification code, please ignore this email and secure your account if necessary.</p>
 <p>Best regards,<br/>The Bank App Backend Team</p>`
 

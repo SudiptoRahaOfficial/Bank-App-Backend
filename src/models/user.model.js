@@ -28,6 +28,10 @@ const userSchema = new Schema(
 			minlength: [6, "Password can't be smaller than 6 characters"],
 			select: false,
 		},
+		verified: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	{ timestamps: true },
 )

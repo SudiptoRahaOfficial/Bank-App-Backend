@@ -6,6 +6,8 @@
 // importing dependencis
 const bcrypt = require('bcryptjs')
 const userModel = require('../models/user.model')
+const otpModel = require('../models/otp.model')
+const { generateSecureOTP } = require('../utils/auth.utils')
 const {
 	sendSignupEmail,
 	sendSigninEmail,
@@ -88,19 +90,42 @@ async function signupController(req, res) {
 			password: passwordHash,
 		})
 
+		// generating otp & encrypting otp
+		const otp = generateSecureOTP()
+		const otpHash = await bcrypt.hash(otp, 10)
+
+		// creating new otp document to db
+		const otpDoc = await otpModel.create({
+			email: user.email,
+			user: user._id,
+			otpHash,
+			expiresAt: new Date(Date.now() + 3 * 60 * 1000),
+		})
+
+		try {
+			// sending email to user on signup
+			await sendSignupEmail(user.email, user.name, otp)
+		} catch (emailError) {
+			// if email sending failed remove the newly created OTP
+			await otpModel.deleteOne({
+				_id: otpDoc._id,
+			})
+
+			// throwing email error
+			throw emailError
+		}
+
 		// response back on success
-		res.status(201).json({
-			message: 'User signed up successfully!',
+		return res.status(201).json({
+			message: 'Signup successful! Please verify your email.',
 			status: 'success',
 			user: {
 				id: user._id,
 				name: user.name,
 				email: user.email,
+				verified: user.verified,
 			},
 		})
-
-		// sending email to user on successful signup
-		await sendSignupEmail(user.email, user.name)
 	} catch (error) {
 		// handling duplicate account error
 		if (error.code === 11000) {
@@ -114,7 +139,7 @@ async function signupController(req, res) {
 		console.error(error)
 
 		// response back on server error
-		res.status(500).json({
+		return res.status(500).json({
 			message: 'Internal server error',
 			status: 'failed',
 		})
@@ -183,7 +208,7 @@ async function signinController(req, res) {
 		console.error(error)
 
 		// response back on server error
-		res.status(500).json({
+		return res.status(500).json({
 			message: 'Internal server error',
 			status: 'failed',
 		})
