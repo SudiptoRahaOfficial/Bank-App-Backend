@@ -139,7 +139,10 @@ async function signupController(req, res) {
 		}
 
 		// logging on unexpected server error
-		console.error(error)
+		console.error('Signup failed', {
+			error: error.message,
+			stack: error.stack,
+		})
 
 		// response back on server error
 		return res.status(500).json({
@@ -249,6 +252,19 @@ async function signinController(req, res) {
 			{ expiresIn: '15m' },
 		)
 
+		try {
+			// sending email to user on signin
+			await sendSigninEmail(user.email, user.name)
+		} catch (emailError) {
+			// logging email delivery failure
+			console.error('Signin email delivery failed', {
+				userId: user._id.toString(),
+				email: user.email,
+				error: emailError.message,
+				stack: emailError.stack,
+			})
+		}
+
 		// response back on success
 		return res.status(200).json({
 			message: 'User signed in successfully',
@@ -263,7 +279,10 @@ async function signinController(req, res) {
 		})
 	} catch (error) {
 		// logging on unexpected server error
-		console.error(error)
+		console.error('Signin failed', {
+			error: error.message,
+			stack: error.stack,
+		})
 
 		// response back on server error
 		return res.status(500).json({
@@ -273,8 +292,17 @@ async function signinController(req, res) {
 	}
 }
 
+/**
+    - signout controller
+    - POST API - "/api/auth/signout"
+ */
+async function signoutController(req, res) {
+    
+}
+
 // exporting controllers
 module.exports = {
 	signupController,
 	signinController,
+	signoutController,
 }
