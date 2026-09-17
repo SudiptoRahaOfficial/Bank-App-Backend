@@ -5,8 +5,11 @@
 
 // importing dependencis
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+const config = require('../config/env.config')
 const userModel = require('../models/user.model')
 const otpModel = require('../models/otp.model')
+const sessionModel = require('../models/session.model')
 const { generateSecureOTP } = require('../utils/auth.utils')
 const {
 	sendSignupEmail,
@@ -203,6 +206,61 @@ async function signinController(req, res) {
 				status: 'failed',
 			})
 		}
+
+		// creating an empty session to generate a unique session id
+		const session = await sessionModel.create({
+			user: user._id,
+			ip: req.ip,
+			userAgent: req.headers['user-agent'],
+		})
+
+		// generating refresh token
+		const refreshToken = jwt.sign(
+			{
+				type: 'refresh',
+				id: user._id,
+				sessionId: session._id,
+			},
+			config.JWT_REFRESH_TOKEN_SECRET,
+			{ expiresIn: '7d' },
+		)
+
+		// hashing & storing refresh token at session
+		const refreshTokenHash = await bcrypt.hash(refreshToken, 10)
+		session.refreshTokenHash = refreshTokenHash
+		await session.save()
+
+		// setting refreshToken to browser's cookie
+		res.cookie('refreshToken', refreshToken, {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'strict',
+			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
+		})
+
+		// generating access token
+		const accessToken = jwt.sign(
+			{
+				type: 'access',
+				id: user._id,
+				sessionId: session._id,
+			},
+			config.JWT_ACCESS_TOKEN_SECRET,
+			{ expiresIn: '15m' },
+		)
+
+		// response back on success
+		return res.status(200).json({
+			message: 'User signed in successfully',
+			status: 'success',
+			user: {
+				id: user._id,
+				name: user.name,
+				email: user.email,
+				verified: user.verified,
+			},
+			accessToken,
+		})
 	} catch (error) {
 		// logging on unexpected server error
 		console.error(error)

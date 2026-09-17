@@ -26,7 +26,6 @@ const userSchema = new Schema(
 			type: String,
 			required: [true, 'Password is required'],
 			minlength: [6, "Password can't be smaller than 6 characters"],
-			select: false,
 		},
 		verified: {
 			type: Boolean,
