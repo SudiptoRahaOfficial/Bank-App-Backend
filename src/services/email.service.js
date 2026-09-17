@@ -63,7 +63,9 @@ Thank you for joining at Bank App Backend. We're excited to have you on board!
 
 Your verification code for Bank App Backend is: ${otp}
 
-This code will expire in next 3 minutes. Verify your account with this code to get full access. For your security, do not share this verification code with anyone.
+This code will expire in next 3 minutes. Verify your account with this code to get full access. 
+
+For your security, do not share this verification code with anyone.
 
 Best regards,
 The Bank App Backend Team`
@@ -72,7 +74,8 @@ The Bank App Backend Team`
 <p>Thank you for joining at Bank App Backend. We're excited to have you on board!</p>
 <p>Your verification code for Bank App Backend is:</p>
 <p><strong>${otp}</strong></p>
-<p>This code will expire in next 3 minutes. Verify your account with this code to get full access. For your security, do not share this verification code with anyone.</p>
+<p>This code will expire in next 3 minutes. Verify your account with this code to get full access.</p>
+<p>For your security, do not share this verification code with anyone.</p>
 <p>Best regards,<br/>The Bank App Backend Team</p>`
 
 	await sendEmail(userEmail, subject, text, html)
