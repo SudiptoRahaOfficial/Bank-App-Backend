@@ -12,7 +12,7 @@ const verifyEmailRateLimiter = rateLimit({
 	windowMs: 10 * 60 * 1000, // 10 minutes
 
 	// maximum requests allowed from one IP
-	limit: 4,
+	limit: 12,
 
 	// send standard RateLimit headers
 	standardHeaders: 'draft-8',
