@@ -444,6 +444,7 @@ async function signinController(req, res) {
 			user: user._id,
 			ip: req.ip,
 			userAgent: req.headers['user-agent'],
+			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
 		})
 
 		// generating refresh token

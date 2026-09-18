@@ -27,9 +27,19 @@ const sessionSchema = new Schema(
 			type: Boolean,
 			default: false,
 		},
+		expiresAt: {
+			type: Date,
+			required: true,
+		},
 	},
 	{ timestamps: true },
 )
+
+// session lookup index
+sessionSchema.index({ user: 1, revoked: 1 })
+
+// session expiration index
+sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
 // making model
 const sessionModel = model('session', sessionSchema)
