@@ -7,6 +7,7 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const config = require('../config/env.config')
+const securityConfigs = require('../config/security.config')
 const userModel = require('../models/user.model')
 const otpModel = require('../models/otp.model')
 const sessionModel = require('../models/session.model')
@@ -196,16 +197,25 @@ async function verifyEmailController(req, res) {
 	}
 
 	try {
-		// finding otp document to db
-		const otpDoc = await otpModel.findOne({
-			email: normalizedEmail,
-			expiresAt: { $gt: new Date() },
-		})
+		// autometically claim one OTP verification attempt
+		const otpDoc = await otpModel.findOneAndUpdate(
+			{
+				email: normalizedEmail,
+				expiresAt: { $gt: new Date() },
+				attempts: { $lt: securityConfigs.MAX_OTP_ATTEMPTS },
+			},
+			{
+				$inc: { attempts: 1 },
+			},
+			{
+				new: true,
+			},
+		)
 
-		// returning failed response if otp document not found
+		// returning failed response if OTP is invalid, expired, or attempts extended
 		if (!otpDoc) {
 			return res.status(400).json({
-				message: 'Invalid or expired OTP',
+				message: 'Invalid or Expired OTP or Attempts extended',
 				status: 'failed',
 			})
 		}

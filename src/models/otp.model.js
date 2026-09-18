@@ -22,6 +22,12 @@ const otpSchema = new Schema(
 			type: String,
 			required: [true, 'OTP hash is required'],
 		},
+		attempts: {
+			type: Number,
+			default: 0,
+			min: [0, 'OTP attempts cannot be negative'],
+			max: [3, 'OTP attempts cannot exceed 3'],
+		},
 		expiresAt: {
 			type: Date,
 			required: [true, 'OTP expiration time is required'],
