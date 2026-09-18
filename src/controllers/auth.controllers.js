@@ -636,6 +636,105 @@ async function verifyEmailController(req, res) {
 	}
 }
 
+/**
+    - resend-verify-email controller
+    - POST API - "/api/auth/resend-verify-email"
+ */
+async function resendVerifyEmailController(req, res) {
+	// extracting email sent by client
+	const { email } = req.body
+
+	// validating required field
+	if (!email) {
+		return res.status(400).json({
+			message: 'Email is required',
+			status: 'failed',
+		})
+	}
+
+	// normalizing email
+	const normalizedEmail = email.trim().toLowerCase()
+
+	// validating email format
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+		return res.status(400).json({
+			message: 'Invalid email address',
+			status: 'failed',
+		})
+	}
+
+	try {
+		// finding user by normalized email
+		const user = await userModel.findOne({
+			email: normalizedEmail,
+		})
+
+		// returning failed response if user not exists
+		if (!user) {
+			return res.status(200).json({
+				message: 'User not found',
+				status: 'failed',
+			})
+		}
+
+		// returning response if email already verified
+		if (user.verified) {
+			return res.status(200).json({
+				message: 'Email already verified',
+				status: 'failed',
+			})
+		}
+
+		// invalidating all previously generated OTPs for this user
+		await otpModel.deleteMany({
+			user: user._id,
+		})
+
+		// generating otp & encrypting otp
+		const otp = generateSecureOTP()
+		const otpHash = await bcrypt.hash(otp, 10)
+
+		// creating new otp document to db
+		const otpDoc = await otpModel.create({
+			email: user.email,
+			user: user._id,
+			otpHash,
+			expiresAt: new Date(Date.now() + 3 * 60 * 1000),
+		})
+
+		try {
+			// sending email to user on signup
+			await sendOTPEmail(user.email, user.name, otp)
+		} catch (emailError) {
+			// if email sending failed remove the newly created OTP
+			await otpModel.deleteOne({
+				_id: otpDoc._id,
+			})
+
+			// throwing email error
+			throw emailError
+		}
+
+		// response back on success
+		return res.status(200).json({
+			message: 'A new OTP has been sent',
+			status: 'success',
+		})
+	} catch (error) {
+		// logging on unexpected server error
+		console.error('OTP sending failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
+}
+
 // exporting controllers
 module.exports = {
 	signupController,
@@ -643,4 +742,5 @@ module.exports = {
 	signoutController,
 	signoutAllController,
 	verifyEmailController,
+	resendVerifyEmailController,
 }
