@@ -6,6 +6,8 @@
 // importing dependencis
 const router = require('express').Router()
 const {
+	signinAccountRateLimiter,
+	signinIpRateLimiter,
 	verifyEmailRateLimiter,
 	resendVerifyEmailRateLimiter,
 } = require('../middlewares/rate-limit.middlewares')
@@ -33,7 +35,12 @@ router.post(
 )
 
 // signin : POST API - "/api/auth/signin"
-router.post('/signin', signinController)
+router.post(
+	'/signin',
+	signinAccountRateLimiter,
+	signinIpRateLimiter,
+	signinController,
+)
 
 // refresh-token : POST API - "/api/auth/refresh-token"
 router.post('/refresh-token', refreshTokenController)
