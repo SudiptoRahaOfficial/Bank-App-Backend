@@ -416,7 +416,112 @@ async function signoutController(req, res) {
     - POST API - "/api/auth/signout-all"
  */
 async function signoutAllController(req, res) {
-	
+	// extracting refresh token
+	const refreshToken = req.cookies.refreshToken
+
+	// returning failed response if refresh token not found
+	if (!refreshToken) {
+		return res.status(401).json({
+			message: 'Unauthenticated user, refresh token missing',
+			status: 'failed',
+		})
+	}
+
+	try {
+		// verifying refresh token
+		const decoded = jwt.verify(
+			refreshToken,
+			config.JWT_REFRESH_TOKEN_SECRET,
+		)
+
+		// extracting token type, user id and session id
+		const { type, id, sessionId } = decoded
+
+		// returning failed response if required data missing
+		if (type !== 'refresh' || !id || !sessionId) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// finding active session belonging to authenticated user
+		const session = await sessionModel.findOne({
+			_id: sessionId,
+			user: id,
+			revoked: false,
+		})
+
+		// returning failed response if session not found
+		if (!session) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// checking refresh token against stored session hash
+		const isRefreshTokenValid = await bcrypt.compare(
+			refreshToken,
+			session.refreshTokenHash,
+		)
+
+		// returning failed response if refresh token doesn't match
+		if (!isRefreshTokenValid) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// revoking all active sessions belonging to the authenticated user
+		await sessionModel.updateMany(
+			{ user: id, revoked: false },
+			{ revoked: true },
+		)
+
+		// clearing refreshToken from browser's cookies
+		res.clearCookie('refreshToken', {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'strict',
+		})
+
+		// response back on success
+		return res.status(200).json({
+			message: 'Signed out from all devices successfully',
+			status: 'success',
+		})
+	} catch (error) {
+		// returning failed response if refresh token verification fails
+		if (
+			error.name === 'JsonWebTokenError' ||
+			error.name === 'TokenExpiredError'
+		) {
+			res.clearCookie('refreshToken', {
+				httpOnly: true,
+				secure: true,
+				sameSite: 'strict',
+			})
+
+			return res.status(401).json({
+				message: 'Invalid refresh token, verification fails',
+				status: 'failed',
+			})
+		}
+
+		// logging on unexpected server error
+		console.error('Signout from all devices failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
 }
 
 // exporting controllers
