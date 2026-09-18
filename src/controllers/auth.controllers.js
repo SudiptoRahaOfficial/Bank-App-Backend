@@ -524,10 +524,19 @@ async function signoutAllController(req, res) {
 	}
 }
 
+/**
+    - verify-email controller
+    - POST API - "/api/auth/verify-email"
+ */
+async function verifyEmailController(req, res) {
+	
+}
+
 // exporting controllers
 module.exports = {
 	signupController,
 	signinController,
 	signoutController,
 	signoutAllController,
+	verifyEmailController,
 }

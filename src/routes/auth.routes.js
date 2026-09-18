@@ -10,6 +10,7 @@ const {
 	signinController,
 	signoutController,
 	signoutAllController,
+	verifyEmailController,
 } = require('../controllers/auth.controllers')
 
 // signup : POST API - "/api/auth/signup"
@@ -23,6 +24,9 @@ router.post('/signout', signoutController)
 
 // signout-all : POST API - "/api/auth/signout-all"
 router.post('/signout-all', signoutAllController)
+
+// verify-email : POST API - "/api/auth/verify-email"
+router.post('/verify-email', verifyEmailController)
 
 // exporting router
 module.exports = router
