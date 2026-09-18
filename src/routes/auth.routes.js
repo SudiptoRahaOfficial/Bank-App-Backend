@@ -7,25 +7,16 @@
 const router = require('express').Router()
 const {
 	signupController,
-	signinController,
-	signoutController,
-	signoutAllController,
 	verifyEmailController,
 	resendVerifyEmailController,
+	signinController,
 	refreshTokenController,
+	signoutController,
+	signoutAllController,
 } = require('../controllers/auth.controllers')
 
 // signup : POST API - "/api/auth/signup"
 router.post('/signup', signupController)
-
-// signin : POST API - "/api/auth/signin"
-router.post('/signin', signinController)
-
-// signout : POST API - "/api/auth/signout"
-router.post('/signout', signoutController)
-
-// signout-all : POST API - "/api/auth/signout-all"
-router.post('/signout-all', signoutAllController)
 
 // verify-email : POST API - "/api/auth/verify-email"
 router.post('/verify-email', verifyEmailController)
@@ -33,8 +24,17 @@ router.post('/verify-email', verifyEmailController)
 // resend-verify-email : POST API - "/api/auth/resend-verify-email"
 router.post('/resend-verify-email', resendVerifyEmailController)
 
+// signin : POST API - "/api/auth/signin"
+router.post('/signin', signinController)
+
 // refresh-token : POST API - "/api/auth/refresh-token"
 router.post('/refresh-token', refreshTokenController)
+
+// signout : POST API - "/api/auth/signout"
+router.post('/signout', signoutController)
+
+// signout-all : POST API - "/api/auth/signout-all"
+router.post('/signout-all', signoutAllController)
 
 // exporting router
 module.exports = router

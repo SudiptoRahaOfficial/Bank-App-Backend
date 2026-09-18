@@ -153,6 +153,217 @@ async function signupController(req, res) {
 }
 
 /**
+    - verify-email controller
+    - POST API - "/api/auth/verify-email"
+ */
+async function verifyEmailController(req, res) {
+	// extracting all data sent by client
+	const { otp, email } = req.body
+
+	// validating required fields
+	if (!otp || !email) {
+		return res.status(400).json({
+			message: 'Email and OTP are required',
+			status: 'failed',
+		})
+	}
+
+	// validating fields type
+	if (typeof email !== 'string' || typeof otp !== 'string') {
+		return res.status(400).json({
+			message: 'Email and OTP must be strings',
+			status: 'failed',
+		})
+	}
+
+	// normalizing email
+	const normalizedEmail = email.trim().toLowerCase()
+
+	// validating email format
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+		return res.status(400).json({
+			message: 'Invalid email address',
+			status: 'failed',
+		})
+	}
+
+	// validating OTP format
+	if (!/^\d{6}$/.test(otp)) {
+		return res.status(400).json({
+			message: 'Invalid OTP format',
+			status: 'failed',
+		})
+	}
+
+	try {
+		// finding otp document to db
+		const otpDoc = await otpModel.findOne({
+			email: normalizedEmail,
+			expiresAt: { $gt: new Date() },
+		})
+
+		// returning failed response if otp document not found
+		if (!otpDoc) {
+			return res.status(400).json({
+				message: 'Invalid or expired OTP',
+				status: 'failed',
+			})
+		}
+
+		// securely comparing provided OTP with stored OTP
+		const isOtpValid = await bcrypt.compare(otp, otpDoc.otpHash)
+
+		// returning failed response if OTP is incorrect
+		if (!isOtpValid) {
+			return res.status(400).json({
+				message: 'Invalid or expired OTP',
+				status: 'failed',
+			})
+		}
+
+		// updating verified status true at user document if OTP verified
+		const user = await userModel.findOneAndUpdate(
+			{ _id: otpDoc.user, verified: false },
+			{ $set: { verified: true } },
+			{ new: true },
+		)
+
+		// returning failed response if user does not exist
+		if (!user) {
+			return res.status(404).json({
+				message: 'User not found',
+				status: 'failed',
+			})
+		}
+
+		// deleting all OTPs belonging to the user
+		await otpModel.deleteMany({ user: otpDoc.user })
+
+		// response back on success
+		return res.status(200).json({
+			message: 'Email verified successfully',
+			status: 'success',
+			user: {
+				name: user.name,
+				email: user.email,
+				verified: user.verified,
+			},
+		})
+	} catch (error) {
+		// logging on unexpected server error
+		console.error('Email verification failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
+}
+
+/**
+    - resend-verify-email controller
+    - POST API - "/api/auth/resend-verify-email"
+ */
+async function resendVerifyEmailController(req, res) {
+	// extracting email sent by client
+	const { email } = req.body
+
+	// validating required field
+	if (!email) {
+		return res.status(400).json({
+			message: 'Email is required',
+			status: 'failed',
+		})
+	}
+
+	// normalizing email
+	const normalizedEmail = email.trim().toLowerCase()
+
+	// validating email format
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+		return res.status(400).json({
+			message: 'Invalid email address',
+			status: 'failed',
+		})
+	}
+
+	try {
+		// finding user by normalized email
+		const user = await userModel.findOne({
+			email: normalizedEmail,
+		})
+
+		// returning failed response if user not exists
+		if (!user) {
+			return res.status(200).json({
+				message: 'User not found',
+				status: 'failed',
+			})
+		}
+
+		// returning response if email already verified
+		if (user.verified) {
+			return res.status(200).json({
+				message: 'Email already verified',
+				status: 'failed',
+			})
+		}
+
+		// invalidating all previously generated OTPs for this user
+		await otpModel.deleteMany({
+			user: user._id,
+		})
+
+		// generating otp & encrypting otp
+		const otp = generateSecureOTP()
+		const otpHash = await bcrypt.hash(otp, 10)
+
+		// creating new otp document to db
+		const otpDoc = await otpModel.create({
+			email: user.email,
+			user: user._id,
+			otpHash,
+			expiresAt: new Date(Date.now() + 3 * 60 * 1000),
+		})
+
+		try {
+			// sending email to user on signup
+			await sendOTPEmail(user.email, user.name, otp)
+		} catch (emailError) {
+			// if email sending failed remove the newly created OTP
+			await otpModel.deleteOne({
+				_id: otpDoc._id,
+			})
+
+			// throwing email error
+			throw emailError
+		}
+
+		// response back on success
+		return res.status(200).json({
+			message: 'A new OTP has been sent',
+			status: 'success',
+		})
+	} catch (error) {
+		// logging on unexpected server error
+		console.error('OTP sending failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
+}
+
+/**
     - signin controller
     - POST API - "/api/auth/signin"
  */
@@ -288,6 +499,153 @@ async function signinController(req, res) {
 	} catch (error) {
 		// logging on unexpected server error
 		console.error('Signin failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
+}
+
+/**
+    - refresh-token controller
+    - POST API - "/api/auth/refresh-token"
+ */
+async function refreshTokenController(req, res) {
+	// extracting refresh token
+	const refreshToken = req.cookies.refreshToken
+
+	// returning failed response if refresh token not found
+	if (!refreshToken) {
+		return res.status(401).json({
+			message: 'Unauthenticated user, refresh token missing',
+			status: 'failed',
+		})
+	}
+
+	try {
+		// verifying refresh token
+		const decoded = jwt.verify(
+			refreshToken,
+			config.JWT_REFRESH_TOKEN_SECRET,
+		)
+
+		// extracting token type, user id and session id
+		const { type, id, sessionId } = decoded
+
+		// returning failed response if required data missing
+		if (type !== 'refresh' || !id || !sessionId) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// checking for the user to db
+		const user = await userModel.findById(id)
+
+		// returning response with error if user not found
+		if (!user) {
+			return res.status(401).json({
+				message: 'Unauthenticated user',
+				status: 'failed',
+			})
+		}
+
+		// finding active session belonging to authenticated user
+		const session = await sessionModel.findOne({
+			_id: sessionId,
+			user: id,
+			revoked: false,
+		})
+
+		// returning failed response if session not found
+		if (!session) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// checking refresh token against stored session hash
+		const isRefreshTokenValid = await bcrypt.compare(
+			refreshToken,
+			session.refreshTokenHash,
+		)
+
+		// returning failed response if refresh token doesn't match
+		if (!isRefreshTokenValid) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// generating a new refresh token
+		const newRefreshToken = jwt.sign(
+			{
+				type: 'refresh',
+				id: user._id,
+				sessionId: session._id,
+			},
+			config.JWT_REFRESH_TOKEN_SECRET,
+			{ expiresIn: '7d' },
+		)
+
+		// hashing & storing refresh token to db
+		const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 10)
+		session.refreshTokenHash = newRefreshTokenHash
+		await session.save()
+
+		// setting new refreshToken to browser's cookie
+		res.cookie('refreshToken', newRefreshToken, {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'strict',
+			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
+		})
+
+		// generating new access token
+		const accessToken = jwt.sign(
+			{
+				type: 'access',
+				id: user._id,
+				sessionId: session._id,
+			},
+			config.JWT_ACCESS_TOKEN_SECRET,
+			{ expiresIn: '15m' },
+		)
+
+		// response back with newly generated access token
+		return res.status(200).json({
+			message: 'Token refreshed successfully',
+			status: 'success',
+			accessToken,
+		})
+	} catch (error) {
+		// returning response if refresh token verification fails
+		if (
+			error.name === 'JsonWebTokenError' ||
+			error.name === 'TokenExpiredError'
+		) {
+			res.clearCookie('refreshToken', {
+				httpOnly: true,
+				secure: true,
+				sameSite: 'strict',
+			})
+
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// logging on unexpected server error
+		console.error('Token rotation failed', {
 			error: error.message,
 			stack: error.stack,
 		})
@@ -524,371 +882,13 @@ async function signoutAllController(req, res) {
 	}
 }
 
-/**
-    - verify-email controller
-    - POST API - "/api/auth/verify-email"
- */
-async function verifyEmailController(req, res) {
-	// extracting all data sent by client
-	const { otp, email } = req.body
-
-	// validating required fields
-	if (!otp || !email) {
-		return res.status(400).json({
-			message: 'Email and OTP are required',
-			status: 'failed',
-		})
-	}
-
-	// validating fields type
-	if (typeof email !== 'string' || typeof otp !== 'string') {
-		return res.status(400).json({
-			message: 'Email and OTP must be strings',
-			status: 'failed',
-		})
-	}
-
-	// normalizing email
-	const normalizedEmail = email.trim().toLowerCase()
-
-	// validating email format
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-		return res.status(400).json({
-			message: 'Invalid email address',
-			status: 'failed',
-		})
-	}
-
-	// validating OTP format
-	if (!/^\d{6}$/.test(otp)) {
-		return res.status(400).json({
-			message: 'Invalid OTP format',
-			status: 'failed',
-		})
-	}
-
-	try {
-		// finding otp document to db
-		const otpDoc = await otpModel.findOne({
-			email: normalizedEmail,
-			expiresAt: { $gt: new Date() },
-		})
-
-		// returning failed response if otp document not found
-		if (!otpDoc) {
-			return res.status(400).json({
-				message: 'Invalid or expired OTP',
-				status: 'failed',
-			})
-		}
-
-		// securely comparing provided OTP with stored OTP
-		const isOtpValid = await bcrypt.compare(otp, otpDoc.otpHash)
-
-		// returning failed response if OTP is incorrect
-		if (!isOtpValid) {
-			return res.status(400).json({
-				message: 'Invalid or expired OTP',
-				status: 'failed',
-			})
-		}
-
-		// updating verified status true at user document if OTP verified
-		const user = await userModel.findOneAndUpdate(
-			{ _id: otpDoc.user, verified: false },
-			{ $set: { verified: true } },
-			{ new: true },
-		)
-
-		// returning failed response if user does not exist
-		if (!user) {
-			return res.status(404).json({
-				message: 'User not found',
-				status: 'failed',
-			})
-		}
-
-		// deleting all OTPs belonging to the user
-		await otpModel.deleteMany({ user: otpDoc.user })
-
-		// response back on success
-		return res.status(200).json({
-			message: 'Email verified successfully',
-			status: 'success',
-			user: {
-				name: user.name,
-				email: user.email,
-				verified: user.verified,
-			},
-		})
-	} catch (error) {
-		// logging on unexpected server error
-		console.error('Email verification failed', {
-			error: error.message,
-			stack: error.stack,
-		})
-
-		// response back on server error
-		return res.status(500).json({
-			message: 'Internal server error',
-			status: 'failed',
-		})
-	}
-}
-
-/**
-    - resend-verify-email controller
-    - POST API - "/api/auth/resend-verify-email"
- */
-async function resendVerifyEmailController(req, res) {
-	// extracting email sent by client
-	const { email } = req.body
-
-	// validating required field
-	if (!email) {
-		return res.status(400).json({
-			message: 'Email is required',
-			status: 'failed',
-		})
-	}
-
-	// normalizing email
-	const normalizedEmail = email.trim().toLowerCase()
-
-	// validating email format
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-		return res.status(400).json({
-			message: 'Invalid email address',
-			status: 'failed',
-		})
-	}
-
-	try {
-		// finding user by normalized email
-		const user = await userModel.findOne({
-			email: normalizedEmail,
-		})
-
-		// returning failed response if user not exists
-		if (!user) {
-			return res.status(200).json({
-				message: 'User not found',
-				status: 'failed',
-			})
-		}
-
-		// returning response if email already verified
-		if (user.verified) {
-			return res.status(200).json({
-				message: 'Email already verified',
-				status: 'failed',
-			})
-		}
-
-		// invalidating all previously generated OTPs for this user
-		await otpModel.deleteMany({
-			user: user._id,
-		})
-
-		// generating otp & encrypting otp
-		const otp = generateSecureOTP()
-		const otpHash = await bcrypt.hash(otp, 10)
-
-		// creating new otp document to db
-		const otpDoc = await otpModel.create({
-			email: user.email,
-			user: user._id,
-			otpHash,
-			expiresAt: new Date(Date.now() + 3 * 60 * 1000),
-		})
-
-		try {
-			// sending email to user on signup
-			await sendOTPEmail(user.email, user.name, otp)
-		} catch (emailError) {
-			// if email sending failed remove the newly created OTP
-			await otpModel.deleteOne({
-				_id: otpDoc._id,
-			})
-
-			// throwing email error
-			throw emailError
-		}
-
-		// response back on success
-		return res.status(200).json({
-			message: 'A new OTP has been sent',
-			status: 'success',
-		})
-	} catch (error) {
-		// logging on unexpected server error
-		console.error('OTP sending failed', {
-			error: error.message,
-			stack: error.stack,
-		})
-
-		// response back on server error
-		return res.status(500).json({
-			message: 'Internal server error',
-			status: 'failed',
-		})
-	}
-}
-
-/**
-    - refresh-token controller
-    - POST API - "/api/auth/refresh-token"
- */
-async function refreshTokenController(req, res) {
-	// extracting refresh token
-	const refreshToken = req.cookies.refreshToken
-
-	// returning failed response if refresh token not found
-	if (!refreshToken) {
-		return res.status(401).json({
-			message: 'Unauthenticated user, refresh token missing',
-			status: 'failed',
-		})
-	}
-
-	try {
-		// verifying refresh token
-		const decoded = jwt.verify(
-			refreshToken,
-			config.JWT_REFRESH_TOKEN_SECRET,
-		)
-
-		// extracting token type, user id and session id
-		const { type, id, sessionId } = decoded
-
-		// returning failed response if required data missing
-		if (type !== 'refresh' || !id || !sessionId) {
-			return res.status(401).json({
-				message: 'Invalid refresh token',
-				status: 'failed',
-			})
-		}
-
-		// checking for the user to db
-		const user = await userModel.findById(id)
-
-		// returning response with error if user not found
-		if (!user) {
-			return res.status(401).json({
-				message: 'Unauthenticated user',
-				status: 'failed',
-			})
-		}
-
-		// finding active session belonging to authenticated user
-		const session = await sessionModel.findOne({
-			_id: sessionId,
-			user: id,
-			revoked: false,
-		})
-
-		// returning failed response if session not found
-		if (!session) {
-			return res.status(401).json({
-				message: 'Invalid refresh token',
-				status: 'failed',
-			})
-		}
-
-		// checking refresh token against stored session hash
-		const isRefreshTokenValid = await bcrypt.compare(
-			refreshToken,
-			session.refreshTokenHash,
-		)
-
-		// returning failed response if refresh token doesn't match
-		if (!isRefreshTokenValid) {
-			return res.status(401).json({
-				message: 'Invalid refresh token',
-				status: 'failed',
-			})
-		}
-
-		// generating a new refresh token
-		const newRefreshToken = jwt.sign(
-			{
-				type: 'refresh',
-				id: user._id,
-				sessionId: session._id,
-			},
-			config.JWT_REFRESH_TOKEN_SECRET,
-			{ expiresIn: '7d' },
-		)
-
-		// hashing & storing refresh token to db
-		const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 10)
-		session.refreshTokenHash = newRefreshTokenHash
-		await session.save()
-
-		// setting new refreshToken to browser's cookie
-		res.cookie('refreshToken', newRefreshToken, {
-			httpOnly: true,
-			secure: true,
-			sameSite: 'strict',
-			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
-		})
-
-		// generating new access token
-		const accessToken = jwt.sign(
-			{
-				type: 'access',
-				id: user._id,
-				sessionId: session._id,
-			},
-			config.JWT_ACCESS_TOKEN_SECRET,
-			{ expiresIn: '15m' },
-		)
-
-		// response back with newly generated access token
-		return res.status(200).json({
-			message: 'Token refreshed successfully',
-			status: 'success',
-			accessToken,
-		})
-	} catch (error) {
-		// returning response if refresh token verification fails
-		if (
-			error.name === 'JsonWebTokenError' ||
-			error.name === 'TokenExpiredError'
-		) {
-			res.clearCookie('refreshToken', {
-				httpOnly: true,
-				secure: true,
-				sameSite: 'strict',
-			})
-
-			return res.status(401).json({
-				message: 'Invalid refresh token',
-				status: 'failed',
-			})
-		}
-
-		// logging on unexpected server error
-		console.error('Token rotation failed', {
-			error: error.message,
-			stack: error.stack,
-		})
-
-		// response back on server error
-		return res.status(500).json({
-			message: 'Internal server error',
-			status: 'failed',
-		})
-	}
-}
-
 // exporting controllers
 module.exports = {
 	signupController,
-	signinController,
-	signoutController,
-	signoutAllController,
 	verifyEmailController,
 	resendVerifyEmailController,
+	signinController,
 	refreshTokenController,
+	signoutController,
+	signoutAllController,
 }
