@@ -411,9 +411,18 @@ async function signoutController(req, res) {
 	}
 }
 
+/**
+    - signout-all controller
+    - POST API - "/api/auth/signout-all"
+ */
+async function signoutAllController(req, res) {
+	
+}
+
 // exporting controllers
 module.exports = {
 	signupController,
 	signinController,
 	signoutController,
+	signoutAllController,
 }
