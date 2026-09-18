@@ -212,10 +212,10 @@ async function verifyEmailController(req, res) {
 			},
 		)
 
-		// returning failed response if OTP is invalid, expired, or attempts extended
+		// returning failed response if OTP is invalid, expired, or attempts over
 		if (!otpDoc) {
 			return res.status(400).json({
-				message: 'Invalid or Expired OTP or Attempts extended',
+				message: 'Invalid or Expired OTP or Attempts over',
 				status: 'failed',
 			})
 		}
