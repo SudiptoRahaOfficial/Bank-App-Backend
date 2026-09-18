@@ -735,6 +735,153 @@ async function resendVerifyEmailController(req, res) {
 	}
 }
 
+/**
+    - refresh-token controller
+    - POST API - "/api/auth/refresh-token"
+ */
+async function refreshTokenController(req, res) {
+	// extracting refresh token
+	const refreshToken = req.cookies.refreshToken
+
+	// returning failed response if refresh token not found
+	if (!refreshToken) {
+		return res.status(401).json({
+			message: 'Unauthenticated user, refresh token missing',
+			status: 'failed',
+		})
+	}
+
+	try {
+		// verifying refresh token
+		const decoded = jwt.verify(
+			refreshToken,
+			config.JWT_REFRESH_TOKEN_SECRET,
+		)
+
+		// extracting token type, user id and session id
+		const { type, id, sessionId } = decoded
+
+		// returning failed response if required data missing
+		if (type !== 'refresh' || !id || !sessionId) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// checking for the user to db
+		const user = await userModel.findById(id)
+
+		// returning response with error if user not found
+		if (!user) {
+			return res.status(401).json({
+				message: 'Unauthenticated user',
+				status: 'failed',
+			})
+		}
+
+		// finding active session belonging to authenticated user
+		const session = await sessionModel.findOne({
+			_id: sessionId,
+			user: id,
+			revoked: false,
+		})
+
+		// returning failed response if session not found
+		if (!session) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// checking refresh token against stored session hash
+		const isRefreshTokenValid = await bcrypt.compare(
+			refreshToken,
+			session.refreshTokenHash,
+		)
+
+		// returning failed response if refresh token doesn't match
+		if (!isRefreshTokenValid) {
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// generating a new refresh token
+		const newRefreshToken = jwt.sign(
+			{
+				type: 'refresh',
+				id: user._id,
+				sessionId: session._id,
+			},
+			config.JWT_REFRESH_TOKEN_SECRET,
+			{ expiresIn: '7d' },
+		)
+
+		// hashing & storing refresh token to db
+		const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 10)
+		session.refreshTokenHash = newRefreshTokenHash
+		await session.save()
+
+		// setting new refreshToken to browser's cookie
+		res.cookie('refreshToken', newRefreshToken, {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'strict',
+			maxAge: 7 * 24 * 60 * 60 * 1000, // 7 day
+		})
+
+		// generating new access token
+		const accessToken = jwt.sign(
+			{
+				type: 'access',
+				id: user._id,
+				sessionId: session._id,
+			},
+			config.JWT_ACCESS_TOKEN_SECRET,
+			{ expiresIn: '15m' },
+		)
+
+		// response back with newly generated access token
+		return res.status(200).json({
+			message: 'Token refreshed successfully',
+			status: 'success',
+			accessToken,
+		})
+	} catch (error) {
+		// returning response if refresh token verification fails
+		if (
+			error.name === 'JsonWebTokenError' ||
+			error.name === 'TokenExpiredError'
+		) {
+			res.clearCookie('refreshToken', {
+				httpOnly: true,
+				secure: true,
+				sameSite: 'strict',
+			})
+
+			return res.status(401).json({
+				message: 'Invalid refresh token',
+				status: 'failed',
+			})
+		}
+
+		// logging on unexpected server error
+		console.error('Token rotation failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
+}
+
 // exporting controllers
 module.exports = {
 	signupController,
@@ -743,4 +890,5 @@ module.exports = {
 	signoutAllController,
 	verifyEmailController,
 	resendVerifyEmailController,
+	refreshTokenController,
 }

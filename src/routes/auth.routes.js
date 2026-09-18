@@ -12,6 +12,7 @@ const {
 	signoutAllController,
 	verifyEmailController,
 	resendVerifyEmailController,
+	refreshTokenController,
 } = require('../controllers/auth.controllers')
 
 // signup : POST API - "/api/auth/signup"
@@ -31,6 +32,9 @@ router.post('/verify-email', verifyEmailController)
 
 // resend-verify-email : POST API - "/api/auth/resend-verify-email"
 router.post('/resend-verify-email', resendVerifyEmailController)
+
+// refresh-token : POST API - "/api/auth/refresh-token"
+router.post('/refresh-token', refreshTokenController)
 
 // exporting router
 module.exports = router
