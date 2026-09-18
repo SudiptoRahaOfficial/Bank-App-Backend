@@ -26,7 +26,7 @@ const otpSchema = new Schema(
 			type: Number,
 			default: 0,
 			min: [0, 'OTP attempts cannot be negative'],
-			max: [1, 'OTP is valid for one-time use only'],
+			max: [3, 'OTP attempts cannot exceed 3'],
 		},
 		expiresAt: {
 			type: Date,

@@ -5,7 +5,10 @@
 
 // importing dependencis
 const router = require('express').Router()
-const { routeRateLimiter } = require('../middlewares/rate-limit.middlewares')
+const {
+	verifyEmailRateLimiter,
+	resendVerifyEmailRateLimiter,
+} = require('../middlewares/rate-limit.middlewares')
 const {
 	signupController,
 	verifyEmailController,
@@ -20,12 +23,12 @@ const {
 router.post('/signup', signupController)
 
 // verify-email : POST API - "/api/auth/verify-email"
-router.post('/verify-email', routeRateLimiter, verifyEmailController)
+router.post('/verify-email', verifyEmailRateLimiter, verifyEmailController)
 
 // resend-verify-email : POST API - "/api/auth/resend-verify-email"
 router.post(
 	'/resend-verify-email',
-	routeRateLimiter,
+	resendVerifyEmailRateLimiter,
 	resendVerifyEmailController,
 )
 
