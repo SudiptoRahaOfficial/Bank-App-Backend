@@ -1,6 +1,6 @@
 /*
- * file name: auth.middlewares.js
- * responsibility: responsible for all auth related middlewares
+	- file name: auth.middlewares.js
+	- responsibility: responsible for all auth related middlewares
  */
 
 // importing dependencis

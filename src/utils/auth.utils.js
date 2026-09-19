@@ -1,6 +1,6 @@
 /*
- * file name: auth.utils.js
- * responsibility: responsible for all auth related util functions
+	- file name: auth.utils.js
+	- responsibility: responsible for all auth related util functions
  */
 
 // importing dependencis

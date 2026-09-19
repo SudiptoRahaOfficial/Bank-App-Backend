@@ -1,6 +1,6 @@
 /*
- * file name: session.model.js
- * responsibility: responsible for session schema & model design
+	- file name: session.model.js
+	- responsibility: responsible for session schema & model design
  */
 
 // importing dependencis

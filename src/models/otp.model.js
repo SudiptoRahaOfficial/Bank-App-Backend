@@ -1,6 +1,6 @@
 /*
- * file name: otp.model.js
- * responsibility: responsible for OTP schema & model design
+	- file name: otp.model.js
+	- responsibility: responsible for OTP schema & model design
  */
 
 // importing dependencis
