@@ -29,6 +29,18 @@ async function createTransactionController(req, res) {
 		})
 	}
 
+	// validating transaction amount
+	if (
+		typeof amount !== 'number' ||
+		!Number.isFinite(amount) ||
+		amount <= 99
+	) {
+		return res.status(400).json({
+			message: 'Invalid amount! Minimum transaction amount is 100',
+			status: 'failed',
+		})
+	}
+
 	try {
 		// validating fromAccount ownership & toAccount existence
 		const [fromUserAccount, toUserAccount] = await Promise.all([
