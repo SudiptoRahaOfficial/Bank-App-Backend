@@ -47,12 +47,6 @@ const sendEmail = async (to, subject, text, html) => {
 	}
 }
 
-/**
-    - some functions for sending auto emails
-        - signup email
-        - signin email
-        - OTP verification email
- */
 // function for sending email on new user signup
 async function sendSignupEmail(userEmail, userName, otp) {
 	const subject = 'Welcome to Bank App Backend'
@@ -809,9 +803,695 @@ The Bank App Backend Team`
 	await sendEmail(userEmail, subject, text, html)
 }
 
+// function for sending transaction success alert email
+async function sendTransactionSuccessAlertEmail(
+	userEmail,
+	userName,
+	transactionId,
+	amount,
+	currency,
+	type,
+) {
+	const transactionType = type === 'DEBIT' ? 'debited from' : 'credited to'
+
+	const subject = `Transaction Successful - ${type} - Bank App Backend`
+
+	const text = `Hello ${userName},
+
+Your transaction was completed successfully.
+
+Transaction ID: ${transactionId}
+Transaction Type: ${type}
+Amount: ${amount} ${currency}
+Status: Successful
+
+An amount of ${amount} ${currency} was ${transactionType} your account.
+
+If you did not authorize this transaction, please secure your account immediately and contact support.
+
+Best regards,
+The Bank App Backend Team`
+
+	const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Successful</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+
+    <table
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
+        border="0"
+        style="background-color: #f4f7fb; padding: 40px 15px;"
+    >
+        <tr>
+            <td align="center">
+
+                <!-- Main Container -->
+                <table
+                    width="100%"
+                    cellpadding="0"
+                    cellspacing="0"
+                    border="0"
+                    style="
+                        max-width: 560px;
+                        background-color: #ffffff;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+                    "
+                >
+
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            align="center"
+                            style="
+                                background-color: #0f172a;
+                                padding: 28px 30px;
+                            "
+                        >
+                            <h1 style="
+                                margin: 0;
+                                color: #ffffff;
+                                font-size: 24px;
+                                font-weight: 700;
+                                letter-spacing: 0.3px;
+                            ">
+                                Bank App Backend
+                            </h1>
+
+                            <p style="
+                                margin: 8px 0 0;
+                                color: #cbd5e1;
+                                font-size: 14px;
+                            ">
+                                Transaction Notification
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 38px 35px;">
+
+                            <p style="
+                                margin: 0 0 18px;
+                                font-size: 16px;
+                                line-height: 1.6;
+                            ">
+                                Hello <strong>${userName}</strong>,
+                            </p>
+
+                            <p style="
+                                margin: 0 0 24px;
+                                font-size: 15px;
+                                line-height: 1.7;
+                                color: #4b5563;
+                            ">
+                                Your transaction was completed successfully.
+                            </p>
+
+                            <!-- Success Status -->
+                            <table
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                style="margin: 0 0 25px;"
+                            >
+                                <tr>
+                                    <td
+                                        align="center"
+                                        style="
+                                            background-color: #f0fdf4;
+                                            border: 1px solid #bbf7d0;
+                                            border-radius: 10px;
+                                            padding: 22px 15px;
+                                        "
+                                    >
+                                        <p style="
+                                            margin: 0 0 8px;
+                                            font-size: 13px;
+                                            color: #166534;
+                                            text-transform: uppercase;
+                                            letter-spacing: 1.5px;
+                                            font-weight: 600;
+                                        ">
+                                            Transaction Status
+                                        </p>
+
+                                        <p style="
+                                            margin: 0;
+                                            font-size: 20px;
+                                            line-height: 1.4;
+                                            font-weight: 700;
+                                            color: #15803d;
+                                        ">
+                                            ✓ Successful
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Transaction Details -->
+                            <table
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                style="
+                                    margin: 0 0 25px;
+                                    border: 1px solid #e2e8f0;
+                                    border-radius: 10px;
+                                    overflow: hidden;
+                                "
+                            >
+
+                                <tr>
+                                    <td style="
+                                        padding: 14px 16px;
+                                        background-color: #f8fafc;
+                                        font-size: 14px;
+                                        color: #64748b;
+                                        border-bottom: 1px solid #e2e8f0;
+                                    ">
+                                        Transaction ID
+                                    </td>
+
+                                    <td align="right" style="
+                                        padding: 14px 16px;
+                                        background-color: #f8fafc;
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        color: #1f2937;
+                                        border-bottom: 1px solid #e2e8f0;
+                                        word-break: break-all;
+                                    ">
+                                        ${transactionId}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td style="
+                                        padding: 14px 16px;
+                                        font-size: 14px;
+                                        color: #64748b;
+                                        border-bottom: 1px solid #e2e8f0;
+                                    ">
+                                        Transaction Type
+                                    </td>
+
+                                    <td align="right" style="
+                                        padding: 14px 16px;
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        color: #1f2937;
+                                        border-bottom: 1px solid #e2e8f0;
+                                    ">
+                                        ${type}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td style="
+                                        padding: 14px 16px;
+                                        font-size: 14px;
+                                        color: #64748b;
+                                    ">
+                                        Amount
+                                    </td>
+
+                                    <td align="right" style="
+                                        padding: 14px 16px;
+                                        font-size: 16px;
+                                        font-weight: 700;
+                                        color: #0f172a;
+                                    ">
+                                        ${amount} ${currency}
+                                    </td>
+                                </tr>
+
+                            </table>
+
+                            <!-- Transaction Summary -->
+                            <p style="
+                                margin: 0 0 24px;
+                                padding: 16px;
+                                background-color: #f8fafc;
+                                border-left: 4px solid #22c55e;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                line-height: 1.7;
+                                color: #475569;
+                            ">
+                                An amount of
+                                <strong>${amount} ${currency}</strong>
+                                was ${transactionType} your account.
+                            </p>
+
+                            <!-- Security Warning -->
+                            <p style="
+                                margin: 0 0 24px;
+                                padding: 16px;
+                                background-color: #fef2f2;
+                                border-left: 4px solid #ef4444;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                line-height: 1.7;
+                                color: #991b1b;
+                            ">
+                                <strong>⚠️ Didn't authorize this transaction?</strong><br>
+                                If you did not authorize this transaction, please
+                                secure your account immediately and contact support.
+                            </p>
+
+                            <p style="
+                                margin: 0;
+                                font-size: 14px;
+                                line-height: 1.7;
+                                color: #64748b;
+                            ">
+                                Please keep this email for your records.
+                                Your transaction ID can be used when contacting
+                                support regarding this transaction.
+                            </p>
+
+                            <p style="
+                                margin: 28px 0 0;
+                                font-size: 15px;
+                                line-height: 1.6;
+                                color: #374151;
+                            ">
+                                Best regards,<br>
+                                <strong>The Bank App Backend Team</strong>
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            align="center"
+                            style="
+                                background-color: #f8fafc;
+                                border-top: 1px solid #e5e7eb;
+                                padding: 20px 30px;
+                            "
+                        >
+                            <p style="
+                                margin: 0;
+                                font-size: 12px;
+                                line-height: 1.6;
+                                color: #94a3b8;
+                            ">
+                                This is an automated transaction notification.
+                                Please do not reply to this email.
+                            </p>
+
+                            <p style="
+                                margin: 6px 0 0;
+                                font-size: 12px;
+                                color: #94a3b8;
+                            ">
+                                © ${new Date().getFullYear()} Bank App Backend
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
+`
+
+	await sendEmail(userEmail, subject, text, html)
+}
+
+// function for sending transaction failure alert email
+async function sendTransactionFailureAlertEmail(
+	userEmail,
+	userName,
+	transactionId,
+	amount,
+	currency,
+	type,
+) {
+	const transactionType = type === 'DEBIT' ? 'debited from' : 'credited to'
+
+	const subject = `Transaction Failed - ${type} - Bank App Backend`
+
+	const text = `Hello ${userName},
+
+Your transaction could not be completed successfully.
+
+Transaction ID: ${transactionId}
+Transaction Type: ${type}
+Amount: ${amount} ${currency}
+Status: Failed
+
+The attempted transaction would have ${transactionType} your account by ${amount} ${currency}.
+
+If you did not initiate this transaction, please secure your account immediately and contact support.
+
+Best regards,
+The Bank App Backend Team`
+
+	const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Failed</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+
+    <table
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
+        border="0"
+        style="background-color: #f4f7fb; padding: 40px 15px;"
+    >
+        <tr>
+            <td align="center">
+
+                <!-- Main Container -->
+                <table
+                    width="100%"
+                    cellpadding="0"
+                    cellspacing="0"
+                    border="0"
+                    style="
+                        max-width: 560px;
+                        background-color: #ffffff;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+                    "
+                >
+
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            align="center"
+                            style="
+                                background-color: #0f172a;
+                                padding: 28px 30px;
+                            "
+                        >
+                            <h1 style="
+                                margin: 0;
+                                color: #ffffff;
+                                font-size: 24px;
+                                font-weight: 700;
+                                letter-spacing: 0.3px;
+                            ">
+                                Bank App Backend
+                            </h1>
+
+                            <p style="
+                                margin: 8px 0 0;
+                                color: #cbd5e1;
+                                font-size: 14px;
+                            ">
+                                Transaction Notification
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 38px 35px;">
+
+                            <p style="
+                                margin: 0 0 18px;
+                                font-size: 16px;
+                                line-height: 1.6;
+                            ">
+                                Hello <strong>${userName}</strong>,
+                            </p>
+
+                            <p style="
+                                margin: 0 0 24px;
+                                font-size: 15px;
+                                line-height: 1.7;
+                                color: #4b5563;
+                            ">
+                                Your transaction could not be completed successfully.
+                            </p>
+
+                            <!-- Failed Status -->
+                            <table
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                style="margin: 0 0 25px;"
+                            >
+                                <tr>
+                                    <td
+                                        align="center"
+                                        style="
+                                            background-color: #fef2f2;
+                                            border: 1px solid #fecaca;
+                                            border-radius: 10px;
+                                            padding: 22px 15px;
+                                        "
+                                    >
+                                        <p style="
+                                            margin: 0 0 8px;
+                                            font-size: 13px;
+                                            color: #991b1b;
+                                            text-transform: uppercase;
+                                            letter-spacing: 1.5px;
+                                            font-weight: 600;
+                                        ">
+                                            Transaction Status
+                                        </p>
+
+                                        <p style="
+                                            margin: 0;
+                                            font-size: 20px;
+                                            line-height: 1.4;
+                                            font-weight: 700;
+                                            color: #dc2626;
+                                        ">
+                                            ✕ Failed
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Transaction Details -->
+                            <table
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                style="
+                                    margin: 0 0 25px;
+                                    border: 1px solid #e2e8f0;
+                                    border-radius: 10px;
+                                    overflow: hidden;
+                                "
+                            >
+
+                                <tr>
+                                    <td style="
+                                        padding: 14px 16px;
+                                        background-color: #f8fafc;
+                                        font-size: 14px;
+                                        color: #64748b;
+                                        border-bottom: 1px solid #e2e8f0;
+                                    ">
+                                        Transaction ID
+                                    </td>
+
+                                    <td align="right" style="
+                                        padding: 14px 16px;
+                                        background-color: #f8fafc;
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        color: #1f2937;
+                                        border-bottom: 1px solid #e2e8f0;
+                                        word-break: break-all;
+                                    ">
+                                        ${transactionId}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td style="
+                                        padding: 14px 16px;
+                                        font-size: 14px;
+                                        color: #64748b;
+                                        border-bottom: 1px solid #e2e8f0;
+                                    ">
+                                        Transaction Type
+                                    </td>
+
+                                    <td align="right" style="
+                                        padding: 14px 16px;
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        color: #1f2937;
+                                        border-bottom: 1px solid #e2e8f0;
+                                    ">
+                                        ${type}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td style="
+                                        padding: 14px 16px;
+                                        font-size: 14px;
+                                        color: #64748b;
+                                    ">
+                                        Amount
+                                    </td>
+
+                                    <td align="right" style="
+                                        padding: 14px 16px;
+                                        font-size: 16px;
+                                        font-weight: 700;
+                                        color: #0f172a;
+                                    ">
+                                        ${amount} ${currency}
+                                    </td>
+                                </tr>
+
+                            </table>
+
+                            <!-- Transaction Summary -->
+                            <p style="
+                                margin: 0 0 24px;
+                                padding: 16px;
+                                background-color: #fff7ed;
+                                border-left: 4px solid #f97316;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                line-height: 1.7;
+                                color: #9a3412;
+                            ">
+                                The attempted transaction would have
+                                <strong>${transactionType}</strong> your account by
+                                <strong>${amount} ${currency}</strong>.
+                            </p>
+
+                            <!-- Security Warning -->
+                            <p style="
+                                margin: 0 0 24px;
+                                padding: 16px;
+                                background-color: #fef2f2;
+                                border-left: 4px solid #ef4444;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                line-height: 1.7;
+                                color: #991b1b;
+                            ">
+                                <strong>⚠️ Didn't initiate this transaction?</strong><br>
+                                If you did not initiate this transaction, please
+                                secure your account immediately and contact support.
+                            </p>
+
+                            <p style="
+                                margin: 0;
+                                font-size: 14px;
+                                line-height: 1.7;
+                                color: #64748b;
+                            ">
+                                Please keep this email for your records.
+                                Your transaction ID can be used when contacting
+                                support regarding this transaction.
+                            </p>
+
+                            <p style="
+                                margin: 28px 0 0;
+                                font-size: 15px;
+                                line-height: 1.6;
+                                color: #374151;
+                            ">
+                                Best regards,<br>
+                                <strong>The Bank App Backend Team</strong>
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            align="center"
+                            style="
+                                background-color: #f8fafc;
+                                border-top: 1px solid #e5e7eb;
+                                padding: 20px 30px;
+                            "
+                        >
+                            <p style="
+                                margin: 0;
+                                font-size: 12px;
+                                line-height: 1.6;
+                                color: #94a3b8;
+                            ">
+                                This is an automated transaction notification.
+                                Please do not reply to this email.
+                            </p>
+
+                            <p style="
+                                margin: 6px 0 0;
+                                font-size: 12px;
+                                color: #94a3b8;
+                            ">
+                                © ${new Date().getFullYear()} Bank App Backend
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
+`
+
+	await sendEmail(userEmail, subject, text, html)
+}
+
 // exporting email sending functions
 module.exports = {
 	sendSignupEmail,
 	sendSigninEmail,
 	sendOTPEmail,
+	sendTransactionSuccessAlertEmail,
+	sendTransactionFailureAlertEmail,
 }
