@@ -5,6 +5,7 @@
 
 // importing dependencis
 const { Schema, model } = require('mongoose')
+const ledger = require('../models/ledger.model')
 
 // making schema
 const accountSchema = new Schema(
@@ -34,6 +35,11 @@ const accountSchema = new Schema(
 
 // compound index on the basis of user & status
 accountSchema.index({ user: 1, status: 1 })
+
+// method for getting account balance
+accountSchema.methods.getAccountBalance = async function () {
+	
+}
 
 // making model
 const accountModel = model('account', accountSchema)

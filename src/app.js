@@ -8,6 +8,7 @@ const express = require('express')
 const cookieParser = require('cookie-parser')
 const authRouter = require('./routes/auth.routes')
 const accountRouter = require('./routes/account.routes')
+const transactionRouter = require('./routes/transaction.routes')
 
 // making app
 const app = express()
@@ -23,6 +24,7 @@ app.use(middlewares) // using middlewares
 // connecting all API routes
 app.use('/api/auth', authRouter)
 app.use('/api/accounts', accountRouter)
+app.use('/api/transaction', transactionRouter)
 
 // exporting app
 module.exports = app
