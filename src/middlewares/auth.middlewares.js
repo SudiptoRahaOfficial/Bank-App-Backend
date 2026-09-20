@@ -74,11 +74,8 @@ async function authenticateUser(req, res, next) {
 			})
 		}
 
-		// attaching authenticated user data to request
-		req.user = {
-			id: user._id,
-			sessionId: session._id,
-		}
+		// attaching authenticated user's id to request
+		req.user = { id: user._id }
 
 		// passing request on success path
 		next()
