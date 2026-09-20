@@ -30,14 +30,30 @@ async function createTransactionController(req, res) {
 	}
 
 	try {
-		// validating fromUser & toUser both account exists
+		// validating fromAccount ownership & toAccount existence
 		const [fromUserAccount, toUserAccount] = await Promise.all([
-			accountModel.findById(fromAccount).populate('user', 'name email'),
+			accountModel
+				.findOne({
+					_id: fromAccount,
+					user: req.user.id,
+				})
+				.populate('user', 'name email'),
+
 			accountModel.findById(toAccount).populate('user', 'name email'),
 		])
+
+		// validating both accounts exists
 		if (!fromUserAccount || !toUserAccount) {
 			return res.status(400).json({
 				message: 'Invalid fromAccount or toAccount',
+				status: 'failed',
+			})
+		}
+
+		// preventing transaction from an account to itself
+		if (fromUserAccount._id.equals(toUserAccount._id)) {
+			return res.status(400).json({
+				message: 'FromAccount and toAccount must be different',
 				status: 'failed',
 			})
 		}
@@ -164,6 +180,7 @@ async function createTransactionController(req, res) {
 		// response back on success
 		return res.status(201).json({
 			message: 'Transaction completed successfully',
+			status: 'success',
 			transaction,
 		})
 	} catch (error) {
