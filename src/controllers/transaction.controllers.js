@@ -123,51 +123,67 @@ async function createTransactionController(req, res) {
 			})
 		}
 
-		// starting session for transaction
+		// Declaring transaction related core operations
+		let transaction
+		let debitLedgerEntry
+		let creditLedgerEntry
+		// creating session for transaction
 		const transactionSession = await startSession()
-		transactionSession.startTransaction()
+		try {
+			transactionSession.startTransaction()
 
-		// creating transaction - status: pending
-		const transaction = await transactionModel.create(
-			{
-				fromAccount,
-				toAccount,
-				amount,
-				idempotencyKey,
-				status: 'PENDING',
-			},
-			{ session: transactionSession },
-		)
+			// creating transaction - status: pending
+			transaction = await transactionModel.create(
+				{
+					fromAccount,
+					toAccount,
+					amount,
+					idempotencyKey,
+					status: 'PENDING',
+				},
+				{ session: transactionSession },
+			)
 
-		// creating debit-ledger-entry for fromAccount
-		const debitLedgerEntry = await ledgerModel.create(
-			{
-				transaction: transaction._id,
-				fromAccount,
-				amount,
-				type: 'DEBIT',
-			},
-			{ session: transactionSession },
-		)
+			// creating debit-ledger-entry for fromAccount
+			debitLedgerEntry = await ledgerModel.create(
+				{
+					transaction: transaction._id,
+					fromAccount,
+					amount,
+					type: 'DEBIT',
+				},
+				{ session: transactionSession },
+			)
 
-		// creating credit-ledger-entry for toAccount
-		const creditLedgerEntry = await ledgerModel.create(
-			{
-				transaction: transaction._id,
-				toAccount,
-				amount,
-				type: 'CREDIT',
-			},
-			{ session: transactionSession },
-		)
+			// creating credit-ledger-entry for toAccount
+			creditLedgerEntry = await ledgerModel.create(
+				{
+					transaction: transaction._id,
+					toAccount,
+					amount,
+					type: 'CREDIT',
+				},
+				{ session: transactionSession },
+			)
 
-		// after successful debit & credit updating transaction-status
-		transaction.status = 'COMPLETED'
-		await transaction.save({ session: transactionSession })
+			// after successful debit & credit updating transaction-status
+			transaction.status = 'COMPLETED'
+			await transaction.save({ session: transactionSession })
 
-		// ending transaction session
-		await transactionSession.commitTransaction()
-		transactionSession.endSession()
+			await transactionSession.commitTransaction()
+		} catch (transactionSessionError) {
+			await transactionSession.abortTransaction()
+
+			console.error('Transaction session error', {
+				error: transactionSessionError.message,
+				stack: transactionSessionError.stack,
+			})
+
+			throw transactionSessionError
+		} finally {
+			// ending transaction session
+			await transactionSession.endSession()
+		}
 
 		try {
 			// sending transaction success alert email to - fromAccount user
@@ -175,7 +191,7 @@ async function createTransactionController(req, res) {
 				fromUserAccount.user.email,
 				fromUserAccount.user.name,
 				transaction._id,
-				amount,
+				transaction.amount,
 				fromUserAccount.currency,
 				debitLedgerEntry.type,
 			)
@@ -185,7 +201,7 @@ async function createTransactionController(req, res) {
 				toUserAccount.user.email,
 				toUserAccount.user.name,
 				transaction._id,
-				amount,
+				transaction.amount,
 				toUserAccount.currency,
 				creditLedgerEntry.type,
 			)
