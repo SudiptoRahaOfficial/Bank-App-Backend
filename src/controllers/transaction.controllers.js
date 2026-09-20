@@ -163,37 +163,51 @@ async function createTransactionController(req, res) {
 
 		// after successful debit & credit updating transaction-status
 		transaction.status = 'COMPLETED'
-		await transaction.save({ transactionSession })
+		await transaction.save({ session: transactionSession })
 
 		// ending transaction session
 		await transactionSession.commitTransaction()
 		transactionSession.endSession()
 
-		// sending transaction success alert email to - fromAccount user
-		await sendTransactionSuccessAlertEmail(
-			fromUserAccount.user.email,
-			fromUserAccount.user.name,
-			transaction._id,
-			amount,
-			fromUserAccount.currency,
-			debitLedgerEntry.type,
-		)
+		try {
+			// sending transaction success alert email to - fromAccount user
+			await sendTransactionSuccessAlertEmail(
+				fromUserAccount.user.email,
+				fromUserAccount.user.name,
+				transaction._id,
+				amount,
+				fromUserAccount.currency,
+				debitLedgerEntry.type,
+			)
 
-		// sending transaction success alert email to - toAccount user
-		await sendTransactionSuccessAlertEmail(
-			toUserAccount.user.email,
-			toUserAccount.user.name,
-			transaction._id,
-			amount,
-			toUserAccount.currency,
-			creditLedgerEntry.type,
-		)
+			// sending transaction success alert email to - toAccount user
+			await sendTransactionSuccessAlertEmail(
+				toUserAccount.user.email,
+				toUserAccount.user.name,
+				transaction._id,
+				amount,
+				toUserAccount.currency,
+				creditLedgerEntry.type,
+			)
+		} catch (emailError) {
+			console.error('Transaction alert email sending failed', {
+				transactionId: transaction._id,
+				error: emailError.message,
+			})
+		}
 
 		// response back on success
 		return res.status(201).json({
 			message: 'Transaction completed successfully',
 			status: 'success',
-			transaction,
+			transaction: {
+				id: transaction._id,
+				fromAccount: transaction.fromAccount,
+				toAccount: transaction.toAccount,
+				amount: transaction.amount,
+				idempotencyKey: transaction.idempotencyKey,
+				status: transaction.status,
+			},
 		})
 	} catch (error) {
 		// logging on unexpected server error
