@@ -8,6 +8,9 @@ const { startSession } = require('mongoose')
 const transactionModel = require('../models/transaction.model')
 const ledgerModel = require('../models/ledger.model')
 const accountModel = require('../models/account.model')
+const {
+	sendTransactionSuccessAlertEmail,
+} = require('../services/email.service')
 
 /**
     - create transaction controller
@@ -28,8 +31,10 @@ async function createTransaction(req, res) {
 
 	try {
 		// validating fromUser & toUser both account exists
-		const fromUserAccount = await accountModel.findOne({ _id: fromAccount })
-		const toUserAccount = await accountModel.findOne({ _id: toAccount })
+		const [fromUserAccount, toUserAccount] = await Promise.all([
+			accountModel.findById(fromAccount).populate('user', 'name email'),
+			accountModel.findById(toAccount).populate('user', 'name email'),
+		])
 		if (!fromUserAccount || !toUserAccount) {
 			return res.status(400).json({
 				message: 'Invalid fromAccount or toAccount',
@@ -103,7 +108,7 @@ async function createTransaction(req, res) {
 				idempotencyKey,
 				status: 'PENDING',
 			},
-			{ transactionSession },
+			{ session: transactionSession },
 		)
 
 		// creating debit-ledger-entry for fromAccount
@@ -114,7 +119,7 @@ async function createTransaction(req, res) {
 				amount,
 				type: 'DEBIT',
 			},
-			{ transactionSession },
+			{ session: transactionSession },
 		)
 
 		// creating credit-ledger-entry for toAccount
@@ -125,16 +130,36 @@ async function createTransaction(req, res) {
 				amount,
 				type: 'CREDIT',
 			},
-			{ transactionSession },
+			{ session: transactionSession },
 		)
 
 		// after successful debit & credit updating transaction-status
 		transaction.status = 'COMPLETED'
 		await transaction.save({ transactionSession })
 
-        // ending transaction session
-        await transactionSession.commitTransaction()
-        transactionSession.endSession()
+		// ending transaction session
+		await transactionSession.commitTransaction()
+		transactionSession.endSession()
+
+		// sending transaction success alert email to - fromAccount user
+		await sendTransactionSuccessAlertEmail(
+			fromUserAccount.user.email,
+			fromUserAccount.user.name,
+			transaction._id,
+			amount,
+			fromUserAccount.currency,
+			debitLedgerEntry.type,
+		)
+
+		// sending transaction success alert email to - toAccount user
+		await sendTransactionSuccessAlertEmail(
+			toUserAccount.user.email,
+			toUserAccount.user.name,
+			transaction._id,
+			amount,
+			toUserAccount.currency,
+			creditLedgerEntry.type,
+		)
 	} catch (error) {
 		// logging on unexpected server error
 		console.error('Transaction failed', {
