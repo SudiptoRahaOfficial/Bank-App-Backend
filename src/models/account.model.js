@@ -6,6 +6,7 @@
 // importing dependencis
 const { Schema, model } = require('mongoose')
 const ledger = require('../models/ledger.model')
+const ledgerModel = require('../models/ledger.model')
 
 // making schema
 const accountSchema = new Schema(
@@ -38,7 +39,39 @@ accountSchema.index({ user: 1, status: 1 })
 
 // method for getting account balance
 accountSchema.methods.getAccountBalance = async function () {
-	
+	// calculating account balance
+	const accountBalanceData = await ledgerModel.aggregate([
+		{ $match: { account: this._id } },
+		{
+			$group: {
+				_id: null,
+				totalDebit: {
+					$sum: {
+						$cond: [{ $eq: ['type', 'DEBIT'] }, 'amount', 0],
+					},
+				},
+				totalCredit: {
+					$sum: {
+						$cond: [{ $eq: ['type', 'CREDIT'] }, 'amount', 0],
+					},
+				},
+			},
+		},
+		{
+			$project: {
+				_id: 0,
+				balance: { $subtract: ['$totalDebit', '$totalCredit'] },
+			},
+		},
+	])
+
+	// checking if account has no balance
+	if (accountBalanceData.length === 0) {
+		return 0
+	}
+
+	// finally returning account balance
+	return accountBalanceData[0].balance
 }
 
 // making model

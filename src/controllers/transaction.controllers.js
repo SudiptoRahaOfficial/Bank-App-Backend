@@ -80,7 +80,8 @@ async function createTransaction(req, res) {
 			})
 		}
 
-        // 
+        // validating fromUserAccount has sufficient balance
+        const fromUserAccountBalance = await fromUserAccount.get
 	} catch (error) {
 		// logging on unexpected server error
 		console.error('Transaction failed', {
