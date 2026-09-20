@@ -16,7 +16,7 @@ const {
     - create transaction controller
     - POST API - "/api/transaction/create-transaction"
  */
-async function createTransaction(req, res) {
+async function createTransactionController(req, res) {
 	// extracting all data sent by client
 	const { fromAccount, toAccount, amount, idempotencyKey } = req.body
 
@@ -160,6 +160,12 @@ async function createTransaction(req, res) {
 			toUserAccount.currency,
 			creditLedgerEntry.type,
 		)
+
+		// response back on success
+		return res.status(201).json({
+			message: 'Transaction completed successfully',
+			transaction,
+		})
 	} catch (error) {
 		// logging on unexpected server error
 		console.error('Transaction failed', {
@@ -177,5 +183,5 @@ async function createTransaction(req, res) {
 
 // exporting controllers
 module.exports = {
-	createTransaction,
+	createTransactionController,
 }

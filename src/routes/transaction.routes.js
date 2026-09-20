@@ -6,10 +6,16 @@
 // importing dependencis
 const router = require('express').Router()
 const { authenticateUser } = require('../middlewares/auth.middlewares')
-const { createTransaction } = require('../controllers/transaction.controllers')
+const {
+	createTransactionController,
+} = require('../controllers/transaction.controllers')
 
 // create-transaction : POST API - "/api/transaction/create-transaction"
-router.post('/create-transaction', authenticateUser, createTransaction)
+router.post(
+	'/create-transaction',
+	authenticateUser,
+	createTransactionController,
+)
 
 // exporting router
 module.exports = router
