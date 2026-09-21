@@ -6,6 +6,7 @@
 // importing dependencis
 const express = require('express')
 const cookieParser = require('cookie-parser')
+const systemRouter = require('./routes/system.routes')
 const authRouter = require('./routes/auth.routes')
 const accountRouter = require('./routes/account.routes')
 const transactionRouter = require('./routes/transaction.routes')
@@ -21,7 +22,8 @@ const middlewares = [
 ]
 app.use(middlewares) // using middlewares
 
-// connecting all API routes
+// connecting all API routers
+app.use('/api/system', systemRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/accounts', accountRouter)
 app.use('/api/transaction', transactionRouter)

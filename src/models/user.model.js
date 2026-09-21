@@ -31,6 +31,12 @@ const userSchema = new Schema(
 			type: Boolean,
 			default: false,
 		},
+		systemUser: {
+			type: Boolean,
+			default: false,
+			select: false,
+			immutable: true,
+		},
 	},
 	{ timestamps: true },
 )
