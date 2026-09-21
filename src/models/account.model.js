@@ -5,7 +5,6 @@
 
 // importing dependencis
 const { Schema, model } = require('mongoose')
-const ledger = require('../models/ledger.model')
 const ledgerModel = require('../models/ledger.model')
 
 // making schema
@@ -47,12 +46,12 @@ accountSchema.methods.getAccountBalance = async function () {
 				_id: null,
 				totalDebit: {
 					$sum: {
-						$cond: [{ $eq: ['type', 'DEBIT'] }, 'amount', 0],
+						$cond: [{ $eq: ['$type', 'DEBIT'] }, '$amount', 0],
 					},
 				},
 				totalCredit: {
 					$sum: {
-						$cond: [{ $eq: ['type', 'CREDIT'] }, 'amount', 0],
+						$cond: [{ $eq: ['$type', 'CREDIT'] }, '$amount', 0],
 					},
 				},
 			},
@@ -60,7 +59,7 @@ accountSchema.methods.getAccountBalance = async function () {
 		{
 			$project: {
 				_id: 0,
-				balance: { $subtract: ['$totalDebit', '$totalCredit'] },
+				balance: { $subtract: ['$totalCredit', '$totalDebit'] },
 			},
 		},
 	])

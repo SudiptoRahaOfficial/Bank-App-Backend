@@ -102,8 +102,57 @@ async function getAllAccountsController(req, res) {
 	}
 }
 
+/**
+    - get account balance controller
+    - GET API - "/api/accounts/balance/:accountId"
+ */
+async function getAccountBalanceController(req, res) {
+	// extracting accountId from request
+	const { accountId } = req.params
+
+	try {
+		// validating requested user is the real account-holder
+		const account = await accountModel.findOne({
+			_id: accountId,
+			user: req.user.id,
+		})
+		if (!account) {
+			return res.status(404).json({
+				message: 'Account not found',
+				status: 'failed',
+			})
+		}
+
+		// getting account balance
+		const accountBalance = await account.getAccountBalance()
+
+		// response back on success
+		return res.status(200).json({
+			message: 'Account balance fetched',
+			status: 'success',
+			balance: {
+				account: account._id,
+				currentBalance: accountBalance,
+			},
+		})
+	} catch (error) {
+		// logging on unexpected server error
+		console.error('Getting account balance failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
+}
+
 // exporting controllers
 module.exports = {
 	createAccountController,
 	getAllAccountsController,
+	getAccountBalanceController,
 }

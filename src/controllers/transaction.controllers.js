@@ -146,7 +146,7 @@ async function createTransactionController(req, res) {
 				[
 					{
 						transaction: transaction._id,
-						fromAccount,
+						account: fromAccount,
 						amount,
 						type: 'DEBIT',
 					},
@@ -159,7 +159,7 @@ async function createTransactionController(req, res) {
 				[
 					{
 						transaction: transaction._id,
-						toAccount,
+						account: toAccount,
 						amount,
 						type: 'CREDIT',
 					},

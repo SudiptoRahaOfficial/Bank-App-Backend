@@ -9,7 +9,11 @@ const { authenticateUser } = require('../middlewares/auth.middlewares')
 const {
 	createAccountController,
 	getAllAccountsController,
+	getAccountBalanceController,
 } = require('../controllers/account.controllers')
+
+// get balance : GET API - "/api/accounts/balance/:accountId"
+router.get('/balance/:accountId', authenticateUser, getAccountBalanceController)
 
 // create-account : POST API - "/api/accounts/create-account"
 router.post('/create-account', authenticateUser, createAccountController)
