@@ -55,7 +55,6 @@ async function initialFundController(req, res) {
 		// validating system account
 		const systemAccount = await accountModel.findOne({
 			user: req.user.id,
-			systemUser: true,
 		})
 		if (!systemAccount) {
 			return res.status(400).json({
@@ -125,36 +124,37 @@ async function initialFundController(req, res) {
 			depositSession.startTransaction()
 
 			// creating deposit - status: pending
-			deposit = await transactionModel.create(
-				{
-					fromAccount: systemAccount._id,
-					toAccount: receiverAccountId,
-					amount,
-					idempotencyKey,
-					status: 'PENDING',
-				},
-				{ session: depositSession },
-			)
+			deposit = new transactionModel({
+				fromAccount: systemAccount._id,
+				toAccount: receiverAccountId,
+				amount,
+				idempotencyKey,
+				status: 'PENDING',
+			})
 
 			// creating debit-ledger-entry for systemAccount
 			debitLedgerEntry = await ledgerModel.create(
-				{
-					transaction: deposit._id,
-					account: systemAccount._id,
-					amount,
-					type: 'DEBIT',
-				},
+				[
+					{
+						transaction: deposit._id,
+						account: systemAccount._id,
+						amount,
+						type: 'DEBIT',
+					},
+				],
 				{ session: depositSession },
 			)
 
 			// creating credit-ledger-entry for receiverAccount
 			creditLedgerEntry = await ledgerModel.create(
-				{
-					transaction: deposit._id,
-					account: receiverAccountId,
-					amount,
-					type: 'CREDIT',
-				},
+				[
+					{
+						transaction: deposit._id,
+						account: receiverAccountId,
+						amount,
+						type: 'CREDIT',
+					},
+				],
 				{ session: depositSession },
 			)
 
@@ -185,7 +185,7 @@ async function initialFundController(req, res) {
 				deposit._id,
 				deposit.amount,
 				receiverAccount.currency,
-				creditLedgerEntry.type,
+				'CREDIT',
 			)
 		} catch (emailError) {
 			console.error('Deposit alert email sending failed', {

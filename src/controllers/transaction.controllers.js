@@ -133,36 +133,37 @@ async function createTransactionController(req, res) {
 			transactionSession.startTransaction()
 
 			// creating transaction - status: pending
-			transaction = await transactionModel.create(
-				{
-					fromAccount,
-					toAccount,
-					amount,
-					idempotencyKey,
-					status: 'PENDING',
-				},
-				{ session: transactionSession },
-			)
+			transaction = new transactionModel({
+				fromAccount,
+				toAccount,
+				amount,
+				idempotencyKey,
+				status: 'PENDING',
+			})
 
 			// creating debit-ledger-entry for fromAccount
 			debitLedgerEntry = await ledgerModel.create(
-				{
-					transaction: transaction._id,
-					fromAccount,
-					amount,
-					type: 'DEBIT',
-				},
+				[
+					{
+						transaction: transaction._id,
+						fromAccount,
+						amount,
+						type: 'DEBIT',
+					},
+				],
 				{ session: transactionSession },
 			)
 
 			// creating credit-ledger-entry for toAccount
 			creditLedgerEntry = await ledgerModel.create(
-				{
-					transaction: transaction._id,
-					toAccount,
-					amount,
-					type: 'CREDIT',
-				},
+				[
+					{
+						transaction: transaction._id,
+						toAccount,
+						amount,
+						type: 'CREDIT',
+					},
+				],
 				{ session: transactionSession },
 			)
 
@@ -193,7 +194,7 @@ async function createTransactionController(req, res) {
 				transaction._id,
 				transaction.amount,
 				fromUserAccount.currency,
-				debitLedgerEntry.type,
+				'DEBIT',
 			)
 
 			// sending transaction success alert email to - toAccount user
@@ -203,7 +204,7 @@ async function createTransactionController(req, res) {
 				transaction._id,
 				transaction.amount,
 				toUserAccount.currency,
-				creditLedgerEntry.type,
+				'CREDIT',
 			)
 		} catch (emailError) {
 			console.error('Transaction alert email sending failed', {
