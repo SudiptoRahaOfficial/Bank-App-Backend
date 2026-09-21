@@ -64,7 +64,46 @@ async function createAccountController(req, res) {
 	}
 }
 
+/**
+    - get all accounts controller
+    - GET API - "/api/accounts"
+ */
+async function getAllAccountsController(req, res) {
+	try {
+		// finding all accounts associated with requested user
+		const accounts = await accountModel.find({ user: req.user.id })
+
+		// validating accounts exists or not
+		if (!accounts) {
+			return res.status(400).json({
+				message: 'No account exists',
+				status: 'failed',
+			})
+		}
+
+		// response back on success
+		return res.status(200).json({
+			message: 'Fetched accounts successfully',
+			status: 'success',
+			accounts,
+		})
+	} catch (error) {
+		// logging on unexpected server error
+		console.error('Fetching accounts failed', {
+			error: error.message,
+			stack: error.stack,
+		})
+
+		// response back on server error
+		return res.status(500).json({
+			message: 'Internal server error',
+			status: 'failed',
+		})
+	}
+}
+
 // exporting controllers
 module.exports = {
 	createAccountController,
+	getAllAccountsController,
 }
