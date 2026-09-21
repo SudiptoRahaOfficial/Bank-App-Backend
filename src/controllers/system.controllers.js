@@ -6,9 +6,14 @@
 // importing dependencis
 
 /**
-    - system controller
-    - POST API - "/api/system/"
+    - initial fund controller
+    - POST API - "/api/system/initial-fund"
  */
+async function initialFundController(req, res) {
+	
+}
 
 // exporting controllers
-module.exports = {}
+module.exports = {
+	initialFundController,
+}
