@@ -5,9 +5,9 @@
 
 // importing dependencis
 const { startSession } = require('mongoose')
+const accountModel = require('../models/account.model')
 const transactionModel = require('../models/transaction.model')
 const ledgerModel = require('../models/ledger.model')
-const accountModel = require('../models/account.model')
 const {
 	sendTransactionSuccessAlertEmail,
 } = require('../services/email.service')
@@ -51,7 +51,11 @@ async function createTransactionController(req, res) {
 				})
 				.populate('user', 'name email'),
 
-			accountModel.findById(toAccount).populate('user', 'name email'),
+			accountModel
+				.findOne({
+					_id: toAccount,
+				})
+				.populate('user', 'name email'),
 		])
 
 		// validating both accounts exists
@@ -127,63 +131,76 @@ async function createTransactionController(req, res) {
 		let transaction
 		let debitLedgerEntry
 		let creditLedgerEntry
-		// creating session for transaction
-		const transactionSession = await startSession()
+
 		try {
+			// starting session
+			const transactionSession = await startSession()
 			transactionSession.startTransaction()
 
 			// creating transaction - status: pending
-			transaction = new transactionModel({
-				fromAccount,
-				toAccount,
-				amount,
-				idempotencyKey,
-				status: 'PENDING',
-			})
+			transaction = (
+				await transactionModel.create(
+					[
+						{
+							fromAccount,
+							toAccount,
+							amount,
+							idempotencyKey,
+							status: 'PENDING',
+						},
+					],
+					{ session: transactionSession },
+				)
+			)[0]
 
 			// creating debit-ledger-entry for fromAccount
-			debitLedgerEntry = await ledgerModel.create(
-				[
-					{
-						transaction: transaction._id,
-						account: fromAccount,
-						amount,
-						type: 'DEBIT',
-					},
-				],
-				{ session: transactionSession },
-			)
+			debitLedgerEntry = (
+				await ledgerModel.create(
+					[
+						{
+							transaction: transaction._id,
+							account: fromAccount,
+							amount,
+							type: 'DEBIT',
+						},
+					],
+					{ session: transactionSession },
+				)
+			)[0]
 
 			// creating credit-ledger-entry for toAccount
-			creditLedgerEntry = await ledgerModel.create(
-				[
-					{
-						transaction: transaction._id,
-						account: toAccount,
-						amount,
-						type: 'CREDIT',
-					},
-				],
-				{ session: transactionSession },
-			)
+			creditLedgerEntry = (
+				await ledgerModel.create(
+					[
+						{
+							transaction: transaction._id,
+							account: toAccount,
+							amount,
+							type: 'CREDIT',
+						},
+					],
+					{ session: transactionSession },
+				)
+			)[0]
 
 			// after successful debit & credit updating transaction-status
-			transaction.status = 'COMPLETED'
-			await transaction.save({ session: transactionSession })
+			transaction = await transactionModel.findOneAndUpdate(
+				{ _id: transaction._id },
+				{ $set: { status: 'COMPLETED' } },
+				{ returnDocument: 'after', session: transactionSession },
+			)
 
+			// closing session
 			await transactionSession.commitTransaction()
-		} catch (transactionSessionError) {
-			await transactionSession.abortTransaction()
-
-			console.error('Transaction session error', {
-				error: transactionSessionError.message,
-				stack: transactionSessionError.stack,
-			})
-
-			throw transactionSessionError
-		} finally {
-			// ending transaction session
 			await transactionSession.endSession()
+		} catch (transactionSessionError) {
+			console.error(transactionSessionError)
+
+			return res.status(400).json({
+				message:
+					'Transaction is pending due to some issue, please try after sometime',
+				status: 'pending',
+			})
 		}
 
 		try {
@@ -194,7 +211,7 @@ async function createTransactionController(req, res) {
 				transaction._id,
 				transaction.amount,
 				fromUserAccount.currency,
-				'DEBIT',
+				debitLedgerEntry.type,
 			)
 
 			// sending transaction success alert email to - toAccount user
@@ -204,7 +221,7 @@ async function createTransactionController(req, res) {
 				transaction._id,
 				transaction.amount,
 				toUserAccount.currency,
-				'CREDIT',
+				creditLedgerEntry.type,
 			)
 		} catch (emailError) {
 			console.error('Transaction alert email sending failed', {

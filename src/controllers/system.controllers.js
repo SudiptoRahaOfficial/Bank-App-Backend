@@ -6,6 +6,7 @@
 // importing dependencis
 const { startSession } = require('mongoose')
 const accountModel = require('../models/account.model')
+const userModel = require('../models/user.model')
 const transactionModel = require('../models/transaction.model')
 const ledgerModel = require('../models/ledger.model')
 const {
@@ -52,9 +53,21 @@ async function initialFundController(req, res) {
 			})
 		}
 
+		// validating system user
+		const systemUser = await userModel.findOne({
+			_id: req.user.id,
+			systemUser: true,
+		})
+		if (!systemUser) {
+			return res.status(400).json({
+				message: 'Invalid system user',
+				status: 'failed',
+			})
+		}
+
 		// validating system account
 		const systemAccount = await accountModel.findOne({
-			user: req.user.id,
+			user: systemUser._id,
 		})
 		if (!systemAccount) {
 			return res.status(400).json({
@@ -118,63 +131,76 @@ async function initialFundController(req, res) {
 		let deposit
 		let debitLedgerEntry
 		let creditLedgerEntry
-		// creating session for deposit
-		const depositSession = await startSession()
+
 		try {
+			// starting session
+			const depositSession = await startSession()
 			depositSession.startTransaction()
 
 			// creating deposit - status: pending
-			deposit = new transactionModel({
-				fromAccount: systemAccount._id,
-				toAccount: receiverAccountId,
-				amount,
-				idempotencyKey,
-				status: 'PENDING',
-			})
+			deposit = (
+				await transactionModel.create(
+					[
+						{
+							fromAccount: systemAccount._id,
+							toAccount: receiverAccountId,
+							amount,
+							idempotencyKey,
+							status: 'PENDING',
+						},
+					],
+					{ session: depositSession },
+				)
+			)[0]
 
 			// creating debit-ledger-entry for systemAccount
-			debitLedgerEntry = await ledgerModel.create(
-				[
-					{
-						transaction: deposit._id,
-						account: systemAccount._id,
-						amount,
-						type: 'DEBIT',
-					},
-				],
-				{ session: depositSession },
-			)
+			debitLedgerEntry = (
+				await ledgerModel.create(
+					[
+						{
+							transaction: deposit._id,
+							account: systemAccount._id,
+							amount,
+							type: 'DEBIT',
+						},
+					],
+					{ session: depositSession },
+				)
+			)[0]
 
 			// creating credit-ledger-entry for receiverAccount
-			creditLedgerEntry = await ledgerModel.create(
-				[
-					{
-						transaction: deposit._id,
-						account: receiverAccountId,
-						amount,
-						type: 'CREDIT',
-					},
-				],
-				{ session: depositSession },
-			)
+			creditLedgerEntry = (
+				await ledgerModel.create(
+					[
+						{
+							transaction: deposit._id,
+							account: receiverAccountId,
+							amount,
+							type: 'CREDIT',
+						},
+					],
+					{ session: depositSession },
+				)
+			)[0]
 
 			// after successful debit & credit updating deposit-status
-			deposit.status = 'COMPLETED'
-			await deposit.save({ session: depositSession })
+			deposit = await transactionModel.findOneAndUpdate(
+				{ _id: deposit._id },
+				{ $set: { status: 'COMPLETED' } },
+				{ returnDocument: 'after', session: depositSession },
+			)
 
+			// closing session
 			await depositSession.commitTransaction()
-		} catch (depositSessionError) {
-			await depositSession.abortTransaction()
-
-			console.error('Deposit session error', {
-				error: depositSessionError.message,
-				stack: depositSessionError.stack,
-			})
-
-			throw depositSessionError
-		} finally {
-			// ending deposit session
 			await depositSession.endSession()
+		} catch (depositSessionError) {
+			console.error(depositSessionError)
+
+			return res.status(400).json({
+				message:
+					'Deposit is pending due to some issue, please try after sometime',
+				status: 'pending',
+			})
 		}
 
 		try {
@@ -185,7 +211,7 @@ async function initialFundController(req, res) {
 				deposit._id,
 				deposit.amount,
 				receiverAccount.currency,
-				'CREDIT',
+				creditLedgerEntry.type,
 			)
 		} catch (emailError) {
 			console.error('Deposit alert email sending failed', {
