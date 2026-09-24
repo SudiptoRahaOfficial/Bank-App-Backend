@@ -28,5 +28,10 @@ app.use('/api/auth', authRouter)
 app.use('/api/accounts', accountRouter)
 app.use('/api/transaction', transactionRouter)
 
+// dummy test API for checking server
+app.get('/', (req, res) => {
+	res.send('Bank App Backend is up and running!')
+})
+
 // exporting app
 module.exports = app
